@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAD2 Scraper - ניהול</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #007bff;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --dark: #1a1a2e;
+            --darker: #0f0f1a;
+            --card: rgba(255,255,255,0.05);
+            --border: rgba(255,255,255,0.1);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Heebo', sans-serif;
+            background: var(--darker);
+            min-height: 100vh;
+            color: #fff;
+        }
+        
+        .bg-pattern {
+            position: fixed;
+            inset: 0;
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(0,123,255,0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(40,167,69,0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo { font-size: 4rem; margin-bottom: 10px; }
+        
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #007bff, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+        
+        .header p { color: #888; font-size: 1.1rem; }
+        
+        /* Control Card */
+        .control-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .status-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .status-display {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .status-icon { font-size: 2.5rem; }
+        .status-text { font-size: 1.4rem; font-weight: 700; }
+        .status-text.active { color: var(--success); }
+        .status-text.inactive { color: var(--danger); }
+        
+        /* Toggle */
+        .toggle-switch {
+            position: relative;
+            width: 80px;
+            height: 40px;
+        }
+        
+        .toggle-switch input { display: none; }
+        
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: var(--danger);
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.4s;
+        }
+        
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            background: white;
+            border-radius: 50%;
+            top: 4px;
+            left: 4px;
+            transition: 0.4s;
+        }
+        
+        .toggle-switch input:checked + .toggle-slider {
+            background: var(--success);
+        }
+        
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(40px);
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Input Groups */
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .input-group input, .input-group select {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-family: 'Heebo', sans-serif;
+            font-size: 1rem;
+        }
+        
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .input-group input::placeholder { color: #666; }
+        
+        /* Chips */
+        .chips-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            min-height: 50px;
+        }
+        
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0,123,255,0.2);
+            border: 1px solid rgba(0,123,255,0.3);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            animation: fadeIn 0.3s;
+        }
+        
+        .chip.site {
+            background: rgba(40,167,69,0.2);
+            border-color: rgba(40,167,69,0.3);
+        }
+        
+        .chip .remove {
+            background: none;
+            border: none;
+            color: #ff6b6b;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0;
+            line-height: 1;
+        }
+        
+        .chip .remove:hover { color: #ff4444; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Heebo', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: #0056b3; }
+        
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #1e7e34; }
+        
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border);
+            color: #fff;
+        }
+        .btn-outline:hover {
+            border-color: var(--primary);
+            background: rgba(0,123,255,0.1);
+        }
+        
+        .btn-sm { padding: 8px 15px; font-size: 0.9rem; }
+        
+        .btn-icon {
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            border-radius: 10px;
+        }
+        
+        /* Available Sites */
+        .available-sites {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .available-sites .label {
+            width: 100%;
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+        
+        .site-btn {
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.05);
+            border: 1px dashed var(--border);
+            border-radius: 20px;
+            color: #888;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .site-btn:hover {
+            background: rgba(40,167,69,0.2);
+            border-color: var(--success);
+            border-style: solid;
+            color: #fff;
+        }
+        
+        /* Schedule */
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        
+        .schedule-item {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .schedule-item .time {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .schedule-item .label {
+            color: #888;
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+        
+        /* Output Section */
+        .output-section {
+            background: rgba(40,167,69,0.1);
+            border: 1px solid rgba(40,167,69,0.3);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .output-section.show { display: block; }
+        
+        .output-section h3 {
+            color: var(--success);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .file-output {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .file-output .filename {
+            color: var(--warning);
+            font-family: monospace;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .file-output pre {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            color: #aaa;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .output-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        /* Info Note */
+        .info-note {
+            background: rgba(255,193,7,0.1);
+            border: 1px solid rgba(255,193,7,0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .info-note p {
+            color: #ccc;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .info-note a { color: var(--warning); }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 0.85rem;
+        }
+        
+        @media (max-width: 600px) {
+            .schedule-grid { grid-template-columns: 1fr; }
+            .status-row { flex-direction: column; }
+            .input-group { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    
+    <div class="container">
+        <div class="header">
+            <div class="logo">🔍</div>
+            <h1>YAD2 Scraper</h1>
+            <p>ניהול הסורק האוטומטי</p>
+        </div>
+        
+        <!-- Status Control -->
+        <div class="control-card">
+            <div class="status-row">
+                <div class="status-display">
+                    <span class="status-icon" id="statusIcon">✅</span>
+                    <span class="status-text active" id="statusText">הסורק פעיל</span>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="mainToggle" checked onchange="updateStatus()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Search Terms -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">🎯 מילות חיפוש</div>
+            </div>
+            <div class="input-group">
+                <input type="text" id="newTerm" placeholder="הכנס מילת חיפוש חדשה..." onkeypress="if(event.key==='Enter')addTerm()">
+                <button class="btn btn-primary btn-icon" onclick="addTerm()">+</button>
+            </div>
+            <div class="chips-container" id="termsContainer"></div>
+        </div>
+        
+        <!-- Sites -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">🌐 אתרים לסריקה</div>
+            </div>
+            <div class="input-group">
+                <input type="text" id="newSiteName" placeholder="שם האתר">
+                <input type="text" id="newSiteUrl" placeholder="כתובת URL">
+                <button class="btn btn-success btn-icon" onclick="addCustomSite()">+</button>
+            </div>
+            <div class="chips-container" id="sitesContainer"></div>
+            
+            <div class="available-sites">
+                <div class="label">➕ אתרים מוכנים להוספה:</div>
+                <button class="site-btn" onclick="addPresetSite('BlueGun', 'https://www.bluegun.co.il')">BlueGun</button>
+                <button class="site-btn" onclick="addPresetSite('Gun2', 'https://www.gun2.co.il')">Gun2</button>
+                <button class="site-btn" onclick="addPresetSite('GunTrade', 'https://www.guntrade.co.il')">GunTrade</button>
+                <button class="site-btn" onclick="addPresetSite('Yad2 נשק', 'https://www.yad2.co.il/products/weapons')">Yad2 נשק</button>
+                <button class="site-btn" onclick="addPresetSite('Yad2 רכב', 'https://www.yad2.co.il/vehicles/cars')">Yad2 רכב</button>
+                <button class="site-btn" onclick="addPresetSite('Yad2 נדלן', 'https://www.yad2.co.il/realestate/forsale')">Yad2 נדל"ן</button>
+                <button class="site-btn" onclick="addPresetSite('Facebook', 'https://www.facebook.com/marketplace')">Facebook</button>
+            </div>
+        </div>
+        
+        <!-- Schedule -->
+        <div class="card">
+            <div class="card-title">🕐 לוח זמנים</div>
+            <div class="schedule-grid">
+                <div class="schedule-item">
+                    <div class="time">08:00</div>
+                    <div class="label">סריקת בוקר</div>
+                </div>
+                <div class="schedule-item">
+                    <div class="time">14:00</div>
+                    <div class="label">סריקת צהריים</div>
+                </div>
+                <div class="schedule-item">
+                    <div class="time">20:30</div>
+                    <div class="label">סריקה + סטטוס</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Save Button -->
+        <div style="text-align: center; margin: 30px 0;">
+            <button class="btn btn-success" style="padding: 15px 40px; font-size: 1.1rem;" onclick="saveToGitHub()">
+                💾 שמור הגדרות ל-GitHub
+            </button>
+            <p style="color: #666; margin-top: 10px; font-size: 0.85rem;">
+                או <a href="#" onclick="generateFiles(); return false;" style="color: #007bff;">צור קבצים להורדה ידנית</a>
+            </p>
+        </div>
+        
+        <!-- Output Section -->
+        <div class="output-section" id="outputSection">
+            <h3>📄 קבצים מוכנים!</h3>
+            
+            <div class="file-output">
+                <div class="filename">📝 config.py</div>
+                <pre id="configOutput"></pre>
+                <button class="btn btn-outline btn-sm" onclick="copyToClipboard('configOutput')">📋 העתק</button>
+            </div>
+            
+            <div class="file-output">
+                <div class="filename">📝 sites.py</div>
+                <pre id="sitesOutput"></pre>
+                <button class="btn btn-outline btn-sm" onclick="copyToClipboard('sitesOutput')">📋 העתק</button>
+            </div>
+            
+            <div class="file-output">
+                <div class="filename">📝 status.json</div>
+                <pre id="statusOutput"></pre>
+                <button class="btn btn-outline btn-sm" onclick="copyToClipboard('statusOutput')">📋 העתק</button>
+            </div>
+            
+            <div class="output-actions">
+                <button class="btn btn-primary" onclick="downloadAll()">📦 הורד הכל (ZIP)</button>
+                <a href="#" id="githubLink" target="_blank" class="btn btn-outline">🔗 פתח GitHub</a>
+            </div>
+            
+            <div class="info-note">
+                <p>
+                    <b>הוראות:</b><br>
+                    1. הורד את הקבצים או העתק את התוכן<br>
+                    2. העלה ל-GitHub Repository שלך<br>
+                    3. הסורק יתחיל לעבוד עם ההגדרות החדשות
+                </p>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-title">⚡ פעולות מהירות</div>
+            <div class="output-actions">
+                <a href="#" id="runManualLink" target="_blank" class="btn btn-primary">▶️ הפעל סריקה</a>
+                <a href="#" id="viewLogsLink" target="_blank" class="btn btn-outline">📋 צפה בלוגים</a>
+                <a href="#" id="editGithubLink" target="_blank" class="btn btn-outline">⚙️ ערוך ב-GitHub</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>🤖 YAD2 Scraper | רץ על GitHub Actions</p>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        // הגדרות GitHub
+        const GITHUB_TOKEN = "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";
+        const GITHUB_USERNAME = "hemichaeli";
+        const REPO_NAME = "yad2-scraper";
+        
+        // נתונים
+        let searchTerms = ["glock 45 mos", "גלוק 45 מוס", "45 mos", "45 מוס"];
+        let sites = [
+            { name: "BlueGun", url: "https://www.bluegun.co.il", enabled: true },
+            { name: "Gun2", url: "https://www.gun2.co.il", enabled: true },
+            { name: "GunTrade", url: "https://www.guntrade.co.il", enabled: true },
+            { name: "Yad2 נשק", url: "https://www.yad2.co.il/products/weapons", enabled: true }
+        ];
+        let isEnabled = true;
+        
+        // עדכון לינקים
+        document.getElementById('githubLink').href = `https://github.com/${GITHUB_USERNAME}/${REPO_NAME}`;
+        document.getElementById('runManualLink').href = `https://github.com/${GITHUB_USERNAME}/${REPO_NAME}/actions/workflows/monitor.yml`;
+        document.getElementById('viewLogsLink').href = `https://github.com/${GITHUB_USERNAME}/${REPO_NAME}/actions`;
+        document.getElementById('editGithubLink').href = `https://github.com/${GITHUB_USERNAME}/${REPO_NAME}`;
+        
+        // אתחול
+        renderTerms();
+        renderSites();
+        loadFromGitHub();
+        
+        // === GitHub API Functions ===
+        
+        async function getFileSha(filename) {
+            try {
+                const response = await fetch(
+                    `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/${filename}`,
+                    { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } }
+                );
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.sha;
+                }
+            } catch (e) {
+                console.log(`File ${filename} not found, will create new`);
+            }
+            return null;
+        }
+        
+        async function updateGitHubFile(filename, content, message) {
+            const sha = await getFileSha(filename);
+            
+            const body = {
+                message: message || `Update ${filename} from UI`,
+                content: btoa(unescape(encodeURIComponent(content)))
+            };
+            
+            if (sha) {
+                body.sha = sha;
+            }
+            
+            const response = await fetch(
+                `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/${filename}`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${GITHUB_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                }
+            );
+            
+            return response.ok;
+        }
+        
+        async function loadFromGitHub() {
+            if (!GITHUB_TOKEN) {
+                console.log('No GitHub token configured');
+                return;
+            }
+            
+            try {
+                // טוען config.py
+                const configResponse = await fetch(
+                    `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/config.py`,
+                    { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } }
+                );
+                
+                if (configResponse.ok) {
+                    const configData = await configResponse.json();
+                    const configContent = decodeURIComponent(escape(atob(configData.content)));
+                    
+                    // מחלץ מילות חיפוש
+                    const termsMatch = configContent.match(/SEARCH_TERMS\s*=\s*\[([\s\S]*?)\]/);
+                    if (termsMatch) {
+                        const termsStr = termsMatch[1];
+                        const terms = termsStr.match(/"([^"]+)"/g);
+                        if (terms) {
+                            searchTerms = terms.map(t => t.replace(/"/g, ''));
+                            renderTerms();
+                        }
+                    }
+                }
+                
+                // טוען sites.py
+                const sitesResponse = await fetch(
+                    `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/sites.py`,
+                    { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } }
+                );
+                
+                if (sitesResponse.ok) {
+                    const sitesData = await sitesResponse.json();
+                    const sitesContent = decodeURIComponent(escape(atob(sitesData.content)));
+                    
+                    // מחלץ אתרים
+                    const sitesMatch = sitesContent.match(/SITES\s*=\s*\[([\s\S]*?)\]/);
+                    if (sitesMatch) {
+                        const loadedSites = [];
+                        const siteBlocks = sitesMatch[1].match(/\{[^}]+\}/g);
+                        if (siteBlocks) {
+                            siteBlocks.forEach(block => {
+                                const nameMatch = block.match(/"name":\s*"([^"]+)"/);
+                                const urlMatch = block.match(/"url":\s*"([^"]+)"/);
+                                if (nameMatch && urlMatch) {
+                                    loadedSites.push({
+                                        name: nameMatch[1],
+                                        url: urlMatch[1],
+                                        enabled: true
+                                    });
+                                }
+                            });
+                        }
+                        if (loadedSites.length > 0) {
+                            sites = loadedSites;
+                            renderSites();
+                        }
+                    }
+                }
+                
+                // טוען status.json
+                const statusResponse = await fetch(
+                    `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/status.json`,
+                    { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } }
+                );
+                
+                if (statusResponse.ok) {
+                    const statusData = await statusResponse.json();
+                    const statusContent = decodeURIComponent(escape(atob(statusData.content)));
+                    const status = JSON.parse(statusContent);
+                    isEnabled = status.enabled !== false;
+                    document.getElementById('mainToggle').checked = isEnabled;
+                    updateStatus();
+                }
+                
+                console.log('✅ Loaded settings from GitHub');
+                
+            } catch (e) {
+                console.error('Error loading from GitHub:', e);
+            }
+        }
+        
+        async function saveToGitHub() {
+            if (!GITHUB_TOKEN) {
+                alert('❌ לא הוגדר GitHub Token!\n\nערוך את הקובץ והוסף את הטוקן שלך.');
+                return;
+            }
+            
+            const saveBtn = document.querySelector('.btn-success[onclick="saveToGitHub()"]');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '⏳ שומר...';
+            saveBtn.disabled = true;
+            
+            try {
+                // יוצר את התוכן
+                const configPy = generateConfigPy();
+                const sitesPy = generateSitesPy();
+                const statusJson = generateStatusJson();
+                
+                // שומר את הקבצים
+                const results = await Promise.all([
+                    updateGitHubFile('config.py', configPy, 'Update search terms from UI'),
+                    updateGitHubFile('sites.py', sitesPy, 'Update sites from UI'),
+                    updateGitHubFile('status.json', statusJson, 'Update status from UI')
+                ]);
+                
+                if (results.every(r => r)) {
+                    saveBtn.innerHTML = '✅ נשמר!';
+                    setTimeout(() => {
+                        saveBtn.innerHTML = originalText;
+                        saveBtn.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error('Some files failed to save');
+                }
+                
+            } catch (e) {
+                console.error('Error saving to GitHub:', e);
+                alert('❌ שגיאה בשמירה: ' + e.message);
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
+            }
+        }
+        
+        function generateConfigPy() {
+            return `# config.py - הגדרות המעקב
+# נוצר אוטומטית על ידי YAD2 Scraper UI
+
+import os
+
+# מילות חיפוש
+SEARCH_TERMS = [
+${searchTerms.map(t => `    "${t}",`).join('\n')}
+]
+
+# הגדרות Telegram
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+
+# הגדרות Email
+EMAIL_ADDRESS = os.environ.get("EMAIL_ADDRESS", "")
+EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "")
+NOTIFY_EMAIL = os.environ.get("NOTIFY_EMAIL", "")
+
+# הגדרות SMTP
+EMAIL_SERVER_TYPE = os.environ.get("EMAIL_SERVER_TYPE", "custom")
+SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "465"))
+SMTP_USE_SSL = os.environ.get("SMTP_USE_SSL", "true").lower() == "true"
+
+# הגדרות כלליות
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+REQUEST_TIMEOUT = 30
+SEEN_ITEMS_FILE = "seen_items.json"
+NOTIFY_ON_NO_RESULTS = False
+`;
+        }
+        
+        function generateSitesPy() {
+            return `# sites.py - רשימת אתרים לסריקה
+# נוצר אוטומטית על ידי YAD2 Scraper UI
+
+SITES = [
+${sites.map(s => `    {
+        "name": "${s.name}",
+        "url": "${s.url}",
+        "base_url": "${(() => { try { return new URL(s.url).origin; } catch(e) { return s.url; } })()}",
+        "enabled": ${s.enabled},
+    },`).join('\n')}
+]
+
+def get_enabled_sites():
+    """מחזיר רק אתרים פעילים"""
+    return [site for site in SITES if site.get("enabled", True)]
+
+def get_site_by_name(name):
+    """מחזיר אתר לפי שם"""
+    for site in SITES:
+        if site["name"] == name:
+            return site
+    return None
+`;
+        }
+        
+        function generateStatusJson() {
+            return JSON.stringify({
+                enabled: isEnabled,
+                created_at: new Date().toISOString(),
+                updated_from: "UI"
+            }, null, 2);
+        }
+        
+        // === UI Functions ===
+        
+        function updateStatus() {
+            const toggle = document.getElementById('mainToggle');
+            const icon = document.getElementById('statusIcon');
+            const text = document.getElementById('statusText');
+            
+            isEnabled = toggle.checked;
+            
+            if (isEnabled) {
+                icon.textContent = '✅';
+                text.textContent = 'הסורק פעיל';
+                text.className = 'status-text active';
+            } else {
+                icon.textContent = '⏸️';
+                text.textContent = 'הסורק מושבת';
+                text.className = 'status-text inactive';
+            }
+        }
+        
+        function addTerm() {
+            const input = document.getElementById('newTerm');
+            const term = input.value.trim();
+            if (term && !searchTerms.includes(term)) {
+                searchTerms.push(term);
+                renderTerms();
+                input.value = '';
+            }
+        }
+        
+        function removeTerm(index) {
+            searchTerms.splice(index, 1);
+            renderTerms();
+        }
+        
+        function renderTerms() {
+            const container = document.getElementById('termsContainer');
+            container.innerHTML = searchTerms.map((term, i) => `
+                <span class="chip">
+                    ${term}
+                    <button class="remove" onclick="removeTerm(${i})">×</button>
+                </span>
+            `).join('');
+        }
+        
+        function addPresetSite(name, url) {
+            if (!sites.find(s => s.name === name)) {
+                sites.push({ name, url, enabled: true });
+                renderSites();
+            }
+        }
+        
+        function addCustomSite() {
+            const name = document.getElementById('newSiteName').value.trim();
+            const url = document.getElementById('newSiteUrl').value.trim();
+            if (name && url) {
+                sites.push({ name, url, enabled: true });
+                renderSites();
+                document.getElementById('newSiteName').value = '';
+                document.getElementById('newSiteUrl').value = '';
+            }
+        }
+        
+        function removeSite(index) {
+            sites.splice(index, 1);
+            renderSites();
+        }
+        
+        function renderSites() {
+            const container = document.getElementById('sitesContainer');
+            container.innerHTML = sites.map((site, i) => `
+                <span class="chip site">
+                    ${site.name}
+                    <button class="remove" onclick="removeSite(${i})">×</button>
+                </span>
+            `).join('');
+        }
+        
+        function generateFiles() {
+            // config.py
+            const configPy = generateConfigPy();
+            const sitesPy = generateSitesPy();
+            const statusJson = generateStatusJson();
+            
+            // הצגת הפלט
+            document.getElementById('configOutput').textContent = configPy;
+            document.getElementById('sitesOutput').textContent = sitesPy;
+            document.getElementById('statusOutput').textContent = statusJson;
+            document.getElementById('outputSection').classList.add('show');
+            
+            // גלילה לפלט
+            document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('הועתק!');
+            });
+        }
+        
+        async function downloadAll() {
+            const zip = new JSZip();
+            
+            zip.file("config.py", generateConfigPy());
+            zip.file("sites.py", generateSitesPy());
+            zip.file("status.json", generateStatusJson());
+            
+            const content = await zip.generateAsync({ type: "blob" });
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'yad2-scraper-config.zip';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
