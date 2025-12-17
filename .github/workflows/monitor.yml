@@ -1,0 +1,78 @@
+name: YAD2 Scraper
+
+on:
+  schedule:
+    # רץ 3 פעמים ביום בשעון ישראל (UTC+2/+3)
+    # 08:00 ישראל = 06:00 UTC
+    # 14:00 ישראל = 12:00 UTC  
+    # 20:30 ישראל = 18:30 UTC (כולל הודעת סטטוס יומית)
+    - cron: '0 6 * * *'    # 08:00 בבוקר
+    - cron: '0 12 * * *'   # 14:00 בצהריים
+    - cron: '30 18 * * *'  # 20:30 בערב + הודעת סטטוס
+  
+  # אפשרות להפעלה ידנית
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download seen items cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            seen_items.json
+            status.json
+          key: scraper-data-${{ github.run_id }}
+          restore-keys: |
+            scraper-data-
+
+      - name: Run YAD2 Scraper
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          UI_URL: ${{ secrets.UI_URL }}
+        run: |
+          python main.py
+
+      - name: Commit status changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add seen_items.json status.json || true
+          git diff --staged --quiet || git commit -m "Update scraper data"
+          git push || true
+
+      - name: Upload seen items as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: seen-items
+          path: seen_items.json
+          retention-days: 90
