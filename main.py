@@ -90,6 +90,15 @@ def filter_new_items(results: List[Dict], seen_items: Set[str]) -> List[Dict]:
     return new_items
 
 
+def get_notification_settings(status: Dict) -> Dict:
+    """מקבל הגדרות התראות - מ-status.json או מ-environment variables"""
+    settings = {
+        "telegram_chat_id": status.get("telegram_chat_id") or os.environ.get("TELEGRAM_CHAT_ID"),
+        "notify_email": status.get("notify_email") or os.environ.get("NOTIFY_EMAIL"),
+    }
+    return settings
+
+
 def main():
     """הפונקציה הראשית"""
     print("=" * 50)
@@ -99,7 +108,10 @@ def main():
     
     # טוען סטטוס
     status = load_status()
-    ui_url = os.environ.get("UI_URL", "https://polite-truffle-f052d0.netlify.app")
+    ui_url = os.environ.get("UI_URL", "https://yad2-scraper-config.netlify.app")
+    
+    # מקבל הגדרות התראות מ-status.json או מ-environment
+    notification_settings = get_notification_settings(status)
     
     # בודק אם המערכת מכובה
     if not status.get("enabled", True):
@@ -116,7 +128,11 @@ def main():
     
     print(f"\n📊 סה\"כ נמצאו: {len(all_results)} תוצאות")
     
-    notifier = Notifier()
+    # יוצר notifier עם הגדרות מותאמות
+    notifier = Notifier(
+        telegram_chat_id=notification_settings.get("telegram_chat_id"),
+        notify_email=notification_settings.get("notify_email")
+    )
     
     if all_results:
         # מסנן רק פריטים חדשים
