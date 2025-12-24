@@ -1,7 +1,7 @@
 {
   "enabled": true,
+  "created_at": "2025-12-24T10:58:55.679Z",
+  "updated_from": "UI",
   "telegram_chat_id": "490847802",
-  "notify_email": "",
-  "created_at": "2025-12-24T08:30:00.000Z",
-  "updated_from": "Claude"
+  "notify_email": "hemi.michaeli@gmail.com"
 }
