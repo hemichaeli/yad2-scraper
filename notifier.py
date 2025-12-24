@@ -2,10 +2,11 @@
 
 import smtplib
 import ssl
+import os
 import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from typing import List, Dict
+from typing import List, Dict, Optional
 from datetime import datetime
 from config import (
     TELEGRAM_BOT_TOKEN,
@@ -21,24 +22,33 @@ from config import (
 
 class Notifier:
     """שולח התראות מפורטות בטלגרם ובמייל"""
+    
+    def __init__(self, telegram_chat_id: Optional[str] = None, notify_email: Optional[str] = None):
+        """
+        אתחול עם הגדרות מותאמות אישית
+        telegram_chat_id: Chat ID מותאם (אם לא ניתן, משתמש ב-config)
+        notify_email: Email מותאם (אם לא ניתן, משתמש ב-config)
+        """
+        self.telegram_chat_id = telegram_chat_id or TELEGRAM_CHAT_ID
+        self.notify_email = notify_email or NOTIFY_EMAIL
 
     def send_telegram(self, message: str) -> bool:
         """שולח הודעה לטלגרם"""
-        if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        if not TELEGRAM_BOT_TOKEN or not self.telegram_chat_id:
             print("⚠️ Telegram credentials not configured")
             return False
 
         try:
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
             payload = {
-                "chat_id": TELEGRAM_CHAT_ID,
+                "chat_id": self.telegram_chat_id,
                 "text": message,
                 "parse_mode": "HTML",
                 "disable_web_page_preview": False,
             }
             response = requests.post(url, json=payload, timeout=10)
             response.raise_for_status()
-            print("✅ Telegram message sent successfully")
+            print(f"✅ Telegram message sent successfully to {self.telegram_chat_id}")
             return True
         except Exception as e:
             print(f"❌ Error sending Telegram message: {e}")
@@ -46,7 +56,7 @@ class Notifier:
 
     def send_email(self, subject: str, body: str) -> bool:
         """שולח מייל - תומך בשרתים שונים"""
-        if not EMAIL_ADDRESS or not EMAIL_PASSWORD or not NOTIFY_EMAIL:
+        if not EMAIL_ADDRESS or not EMAIL_PASSWORD or not self.notify_email:
             print("⚠️ Email credentials not configured")
             return False
 
@@ -54,7 +64,7 @@ class Notifier:
             msg = MIMEMultipart("alternative")
             msg["Subject"] = subject
             msg["From"] = EMAIL_ADDRESS
-            msg["To"] = NOTIFY_EMAIL
+            msg["To"] = self.notify_email
 
             # גרסת טקסט פשוט
             text_content = self._html_to_text(body)
@@ -161,14 +171,14 @@ class Notifier:
                 context = ssl.create_default_context()
                 with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, context=context) as server:
                     server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-                    server.sendmail(EMAIL_ADDRESS, NOTIFY_EMAIL, msg.as_string())
+                    server.sendmail(EMAIL_ADDRESS, self.notify_email, msg.as_string())
             else:
                 with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
                     server.starttls()
                     server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-                    server.sendmail(EMAIL_ADDRESS, NOTIFY_EMAIL, msg.as_string())
+                    server.sendmail(EMAIL_ADDRESS, self.notify_email, msg.as_string())
             
-            print("✅ Email sent successfully")
+            print(f"✅ Email sent successfully to {self.notify_email}")
             return True
         except Exception as e:
             print(f"❌ Error sending email: {e}")
